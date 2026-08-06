@@ -48,6 +48,10 @@ Grade only the analyst's claim about the driver. Ignore style, length, confidenc
 document ids. Do not reward a claim for being well written.
 
 Respond with the score and a one-sentence reason.
+
+Calibration, because a judge that cannot fail an answer is not a judge: the COMMON WRONG \
+ANSWER above must score 0 or 1. So must a claim generic enough to fit any struggling \
+account. Reserve 3 and 4 for answers that commit to the reference driver specifically.
 """
 
 ABSTAIN_PROMPT = """\

@@ -45,7 +45,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from insight_consolidation_v1.generator import build_episode, plan_episodes
-from insight_consolidation_v1.scoring import ANSWER_CONTRACT, citation_f1, parse_answer
+from insight_consolidation_v1.scoring import (
+    ANSWER_CONTRACT,
+    citation_f1,
+    parse_answer,
+    strip_reasoning,
+)
 from insight_consolidation_v1.store import EvidenceStore
 
 GATE_FLOOR = 0.1
@@ -126,7 +131,9 @@ element.
 0 - Wrong, empty, or unrelated.
 
 Grade only the claim about the driver. Ignore style, length, confidence and document ids.
-Reply with the digit alone on the first line, then one sentence of reason.
+
+End your reply with a line of exactly this form, and nothing after it:
+SCORE: <digit>
 """
 
 JUDGE_ABSTAIN = """\
@@ -138,7 +145,9 @@ THE ANALYST'S ANSWER:
 
 Score 4 if the analyst clearly declined to name a driver and said the evidence is \
 insufficient. Score 0 if the analyst asserted a driver. Score 2 if genuinely ambiguous.
-Reply with the digit alone on the first line, then one sentence of reason.
+
+End your reply with a line of exactly this form, and nothing after it:
+SCORE: <digit>
 """
 
 
@@ -360,6 +369,35 @@ def run_episode(client: Client, spec, max_turns: int = 24) -> tuple[Rollout, obj
 # --------------------------------------------------------------------------- scoring
 
 
+_VERDICT_TAG = re.compile(r"SCORE\s*[:=]?\s*([0-4])\b", re.I)
+_LEADING_DIGIT = re.compile(r"\A\D{0,20}?([0-4])\b")
+
+
+def parse_verdict(text: str) -> float | None:
+    """Recover the grade from the judge's reply. Returns None if no grade is recoverable.
+
+    Two things make the naive `re.search(r"[0-4]", text)` actively dangerous with reasoning
+    models, and both bit this harness:
+
+      1. The scratchpad comes first, so the first digit in the response is whatever number
+         the judge happened to mention while thinking - a year, a document count, a list
+         index. The grade was being read off noise.
+      2. If the token budget cuts the reply off inside the scratchpad, there is no grade at
+         all, and returning 0.0 for that is indistinguishable from a real zero.
+
+    So: strip the scratchpad, look for an explicit SCORE tag, then a leading digit, and
+    return None rather than guessing.
+    """
+    cleaned = strip_reasoning(text)
+    if not cleaned:
+        return None
+    for pattern in (_VERDICT_TAG, _LEADING_DIGIT):
+        match = pattern.search(cleaned)
+        if match:
+            return int(match.group(1)) / 4.0
+    return None
+
+
 def judge(client: Client, response: str, reference: str, distractor: str, abstain: bool) -> float:
     if not response.strip():
         return 0.0
@@ -370,9 +408,18 @@ def judge(client: Client, response: str, reference: str, distractor: str, abstai
             reference=reference, distractor=distractor, response=response[:6000]
         )
     )
-    text = client.chat("You are a careful grader. Follow the scale exactly.", [{"role": "user", "content": prompt}], 200)
-    match = re.search(r"[0-4]", text)
-    return int(match.group()) / 4.0 if match else 0.0
+    # Enough room for a reasoning model to think and still emit the verdict. At 1200 roughly
+    # one grade in forty was still cut off mid-scratchpad and had to be dropped.
+    text = client.chat(
+        "You are a careful grader. Follow the scale exactly.",
+        [{"role": "user", "content": prompt}],
+        2000,
+    )
+    verdict = parse_verdict(text)
+    if verdict is None:
+        # Unparseable is an instrument failure, not a score of zero.
+        raise ModelUnavailable(f"judge returned no recoverable grade: {text[:200]!r}")
+    return verdict
 
 
 def score(judge_client: Client, roll: Rollout, episode) -> dict:

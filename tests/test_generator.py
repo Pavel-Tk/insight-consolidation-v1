@@ -159,6 +159,45 @@ def test_parse_answer_forms():
     assert parse_answer("I must abstain, insufficient evidence.").abstain
 
 
+def test_reasoning_scratchpad_is_not_the_answer():
+    """Reasoning models emit <think> inline. Grading it means grading deliberation - every
+    hypothesis the model raised and rejected - instead of what it committed to, and it lets
+    document ids the model merely mused about count as citations."""
+    from insight_consolidation_v1.scoring import strip_reasoning
+
+    reply = (
+        "<think>Maybe doc_00001 matters. Could be a budget freeze. No, discard that.</think>\n"
+        '```json\n{"driver": "blame risk", "evidence": ["doc_00042"], "abstain": false}\n```'
+    )
+    answer = parse_answer(reply)
+    assert answer.parsed
+    assert answer.driver == "blame risk"
+    assert answer.evidence == ("doc_00042",), "ids from the scratchpad must not be cited"
+
+    # An unclosed <think> is what a truncated response looks like. It must not survive into
+    # the graded text either.
+    assert "discard" not in strip_reasoning("<think>rambling, discard this")
+    prose = parse_answer("<think>doc_00003 maybe</think> It is doc_00007.")
+    assert prose.evidence == ("doc_00007",)
+
+
+def test_judge_verdict_is_not_read_off_the_scratchpad():
+    """Regression: the harness used to grade with `re.search(r"[0-4]", text)`, which on a
+    reasoning model picks up the first digit in the <think> block - a year, a document count
+    - rather than the verdict. It made the judged reward pure noise, and the calibration
+    probe caught it scoring the stereotype above the reference. Unparseable must be None,
+    never 0.0, or an instrument failure is indistinguishable from a real zero."""
+    from run_eval import parse_verdict
+
+    assert parse_verdict("<think>2023 and 4 docs</think>\nSCORE: 0") == 0.0
+    assert parse_verdict("<think>3 things, 2 points</think>\nSCORE: 4") == 1.0
+    assert parse_verdict("SCORE: 2") == 0.5
+    assert parse_verdict("2\nThe analyst hedged.") == 0.5
+    assert parse_verdict("<think>cut off mid thought with 3 items") is None
+    assert parse_verdict("prose with no grade in it") is None
+    assert parse_verdict("") is None
+
+
 def test_world_is_consistent_and_specific():
     """Every schema names its product, its teams and what is at stake, and the whole corpus
     lives in that one world. Signals must not be the only documents that name the real

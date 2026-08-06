@@ -53,7 +53,20 @@ Three design decisions follow from that.
 
 Lexical retrieval recovers about 14% of the entailing evidence at poor precision - better than random, nowhere near solving it. If `grep (top hits)` recall ever approaches 1.0, the episodes need regenerating.
 
-**4. One world per schema, shared by signal and noise alike.** Every schema fixes its own setting: the product being sold, the customer's industry, the named internal teams, the specific thing at stake. Claims Engineering built Project Tern and it cannot read handwritten loss-run supplements. Marketing Technology and Data Platform Engineering are fighting over customer identity resolution. The PCI DSS 4.0 assessment is in the second week of November.
+**4. The judge is calibrated before it is trusted, and the calibration ships.** KnowMe-Bench reports Cohen's kappa against human labels. This environment has no human labels yet, so it measures construct validity instead: the judge holds the answer key, so we know what it *should* say about four kinds of answer. `python judge_check.py` grades each schema's own description, its one-line label, the stereotype the anti-prior split is built from, and a generic claim that fits any struggling account.
+
+```
+  reference   mean=1.000   (the latent driver's own description, verbatim)
+  label       mean=0.889   (the same driver, compressed to one line)
+  stereotype  mean=0.025   (the decoy - the answer it was warned about)
+  generic     mean=0.275   (plausible, fits any account)
+
+  separation (label - stereotype) = +0.864
+```
+
+Run this before quoting any judged number. It is forty calls and it is the difference between a reward and a random variable - the first time it ran here it returned **-0.050**, scoring the decoy *above* the verbatim correct answer. The judge was fine; the harness was reading the grade off the first digit in the model's reasoning scratchpad. A benchmark can be wrong in a direction that flatters nobody, and this one was, until something measured it.
+
+**5. One world per schema, shared by signal and noise alike.** Every schema fixes its own setting: the product being sold, the customer's industry, the named internal teams, the specific thing at stake. Claims Engineering built Project Tern and it cannot read handwritten loss-run supplements. Marketing Technology and Data Platform Engineering are fighting over customer identity resolution. The PCI DSS 4.0 assessment is in the second week of November.
 
 Ambient noise and prior-decoys draw from that same world. An earlier draft let noise pick team names from a generic pool, which meant signal documents were the only ones naming the real teams - separable by vocabulary alone. Closing that leak is visible above: grep F1 fell from 0.119 to 0.072.
 

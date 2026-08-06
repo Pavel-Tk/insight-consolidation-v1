@@ -1,0 +1,206 @@
+{
+  "model": "MiniMax-M2",
+  "summary": {
+    "reference": 1.0,
+    "label": 0.8888888888888888,
+    "stereotype": 0.025,
+    "generic": 0.275
+  },
+  "rows": [
+    {
+      "schema": "career_exposure",
+      "probe": "reference",
+      "score": 1.0
+    },
+    {
+      "schema": "career_exposure",
+      "probe": "label",
+      "score": 1.0
+    },
+    {
+      "schema": "career_exposure",
+      "probe": "stereotype",
+      "score": 0.0
+    },
+    {
+      "schema": "career_exposure",
+      "probe": "generic",
+      "score": 0.5
+    },
+    {
+      "schema": "internal_political_stalemate",
+      "probe": "reference",
+      "score": 1.0
+    },
+    {
+      "schema": "internal_political_stalemate",
+      "probe": "label",
+      "score": 0.75
+    },
+    {
+      "schema": "internal_political_stalemate",
+      "probe": "stereotype",
+      "score": 0.0
+    },
+    {
+      "schema": "internal_political_stalemate",
+      "probe": "generic",
+      "score": 0.5
+    },
+    {
+      "schema": "champion_is_leaving",
+      "probe": "reference",
+      "score": 1.0
+    },
+    {
+      "schema": "champion_is_leaving",
+      "probe": "label",
+      "score": 1.0
+    },
+    {
+      "schema": "champion_is_leaving",
+      "probe": "stereotype",
+      "score": 0.0
+    },
+    {
+      "schema": "champion_is_leaving",
+      "probe": "generic",
+      "score": 0.0
+    },
+    {
+      "schema": "already_built_internally",
+      "probe": "reference",
+      "score": 1.0
+    },
+    {
+      "schema": "already_built_internally",
+      "probe": "label",
+      "score": 1.0
+    },
+    {
+      "schema": "already_built_internally",
+      "probe": "stereotype",
+      "score": 0.0
+    },
+    {
+      "schema": "already_built_internally",
+      "probe": "generic",
+      "score": 0.25
+    },
+    {
+      "schema": "compliance_deadline_not_value",
+      "probe": "reference",
+      "score": 1.0
+    },
+    {
+      "schema": "compliance_deadline_not_value",
+      "probe": "label",
+      "score": 0.75
+    },
+    {
+      "schema": "compliance_deadline_not_value",
+      "probe": "stereotype",
+      "score": 0.0
+    },
+    {
+      "schema": "compliance_deadline_not_value",
+      "probe": "generic",
+      "score": 0.25
+    },
+    {
+      "schema": "pilot_as_free_consulting",
+      "probe": "reference",
+      "score": 1.0
+    },
+    {
+      "schema": "pilot_as_free_consulting",
+      "probe": "label",
+      "score": 1.0
+    },
+    {
+      "schema": "pilot_as_free_consulting",
+      "probe": "stereotype",
+      "score": 0.25
+    },
+    {
+      "schema": "pilot_as_free_consulting",
+      "probe": "generic",
+      "score": 0.25
+    },
+    {
+      "schema": "budget_freeze",
+      "probe": "reference",
+      "score": 1.0
+    },
+    {
+      "schema": "budget_freeze",
+      "probe": "label",
+      "score": 1.0
+    },
+    {
+      "schema": "budget_freeze",
+      "probe": "stereotype",
+      "score": 0.0
+    },
+    {
+      "schema": "budget_freeze",
+      "probe": "generic",
+      "score": 0.25
+    },
+    {
+      "schema": "usage_concentrated_in_one_team",
+      "probe": "reference",
+      "score": 1.0
+    },
+    {
+      "schema": "usage_concentrated_in_one_team",
+      "probe": "label",
+      "score": 0.75
+    },
+    {
+      "schema": "usage_concentrated_in_one_team",
+      "probe": "stereotype",
+      "score": 0.0
+    },
+    {
+      "schema": "usage_concentrated_in_one_team",
+      "probe": "generic",
+      "score": 0.25
+    },
+    {
+      "schema": "trust_damaged_earlier",
+      "probe": "reference",
+      "score": 1.0
+    },
+    {
+      "schema": "trust_damaged_earlier",
+      "probe": "label",
+      "score": 0.75
+    },
+    {
+      "schema": "trust_damaged_earlier",
+      "probe": "stereotype",
+      "score": 0.0
+    },
+    {
+      "schema": "trust_damaged_earlier",
+      "probe": "generic",
+      "score": 0.25
+    },
+    {
+      "schema": "buying_for_a_person_not_a_problem",
+      "probe": "reference",
+      "score": 1.0
+    },
+    {
+      "schema": "buying_for_a_person_not_a_problem",
+      "probe": "stereotype",
+      "score": 0.0
+    },
+    {
+      "schema": "buying_for_a_person_not_a_problem",
+      "probe": "generic",
+      "score": 0.25
+    }
+  ]
+}
