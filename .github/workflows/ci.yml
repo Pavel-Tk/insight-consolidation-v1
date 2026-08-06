@@ -19,19 +19,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python }}
       - name: Install
-        run: uv pip install --system -e ".[dev]"
+        run: uv venv --python ${{ matrix.python }} && uv pip install -e ".[dev]"
       - name: Tests
-        run: python -m pytest tests -q
+        run: uv run --no-sync python -m pytest tests -q
       - name: Baselines are reproducible and still weak
         shell: bash
         run: |
-          python -m insight_consolidation_v1.baselines | tee out1.txt
-          python -m insight_consolidation_v1.baselines > out2.txt
+          uv run --no-sync python -m insight_consolidation_v1.baselines | tee out1.txt
+          uv run --no-sync python -m insight_consolidation_v1.baselines > out2.txt
           diff out1.txt out2.txt || { echo "baselines are not reproducible"; exit 1; }
           # If lexical retrieval ever solves the task, the episodes need regenerating and
           # every published number is void. Fail loudly rather than discover it later.
-          python - <<'PY'
+          uv run --no-sync python - <<'PY'
           import re
           line = [l for l in open("out1.txt") if "grep (top hits)" in l][0]
           recall = float(re.search(r"R=([\d.]+)", line).group(1))
@@ -47,11 +49,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
       - name: Install
-        run: uv pip install --system -e ".[dev]"
+        run: uv venv --python 3.12 && uv pip install -e ".[dev]"
       - name: Taskset imports, loads and exposes its rubric
         run: |
-          python - <<'PY'
+          uv run --no-sync python - <<'PY'
           from insight_consolidation_v1.taskset import InsightConfig, InsightTask, InsightTaskset
           ts = InsightTaskset(InsightConfig(num_tasks=12, seed=0))
           tasks = list(ts.load())
