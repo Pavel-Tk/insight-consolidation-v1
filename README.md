@@ -27,20 +27,29 @@ What none of them ask for is a claim about intent that no document states, backe
 
 The field's credibility problem is judges and self-reported numbers. Zep's LoCoMo score was corrected from 84 to 75.14 after an arithmetic error. EverMemOS's 92.32 reproduced at 38.38. MemPalace's "100%" traced back to three hardcoded patches. GPT-4o-mini judges accept roughly 63% of intentionally wrong-but-topical answers.
 
-Three design decisions follow from that.
+Five design decisions follow from that.
 
 **1. Construct-then-hide.** The latent driver is sampled *first*, as a structured object. Evidence is then manufactured to entail it only in aggregate. Ground truth is a variable we chose, never a human annotation of prose, and never an artifact of phrasing.
 
-**2. The citation gate.** The agent's free-text driver is scored by a judge - but that judge holds the answer key, and its score is multiplied by a gate that ramps with citation F1 against the minimal entailing set. A correct-sounding driver with no supporting evidence keeps 10% of its score. You cannot be paid for guessing the stereotype and dressing it up:
+**2. The citation gate.** The agent's free-text driver is scored by a judge - but that judge holds the answer key, and its score is multiplied by a gate that ramps with citation F1 against the minimal entailing set. A correct-sounding driver with no supporting evidence keeps 10% of its score.
 
-| cited | score |
-|---|---|
-| all 4 entailing docs | 1.00 |
-| 2 of 4 | 1.00 |
-| 1 of 4 | 0.82 |
-| 1 right, 1 wrong | 0.70 |
-| none | 0.10 |
-| 20 documents, shotgun | 0.10 |
+Against a 4-document entailing set, with `gate_floor=0.1` and `gate_full=0.5`:
+
+| cited | precision | recall | F1 | gate |
+|---|---|---|---|---|
+| all 4 entailing docs | 1.00 | 1.00 | 1.00 | **1.00** |
+| 2 of 4 | 1.00 | 0.50 | 0.67 | **1.00** |
+| 1 of 4 | 1.00 | 0.25 | 0.40 | **0.82** |
+| 1 right, 1 wrong | 0.50 | 0.25 | 0.33 | **0.70** |
+| 20 docs incl. all 4 | 0.20 | 1.00 | 0.33 | **0.70** |
+| all 50 docs (volume 50) | 0.08 | 1.00 | 0.15 | **0.37** |
+| none, or none correct | 0.00 | 0.00 | 0.00 | **0.10** |
+
+Read the shotgun rows honestly, because they are the interesting ones. **The gate does not stop over-citing.** Padding to 20 documents to be sure of covering the answer still keeps 70% of the judged score - the same as one right and one wrong citation. Only indiscriminate citation at scale is bitten hard, and that is recall saturating against collapsing precision, not the gate doing something clever.
+
+What the gate does stop is the failure it was built for: asserting a driver you cannot evidence at all. That path floors at 0.10. And guessing the stereotype does not pay either, but that is the judge's doing rather than the gate's - calibration below scores the decoy at 0.025.
+
+Over-citing is priced by `evidence_grounding` instead, which is raw F1 at weight 0.5. On the total reward, a correct driver cited precisely earns 1.75; the same driver shotgunned across 20 documents earns 1.12. A real cost, and a smaller one than the gate is often assumed to impose. Sharpening it is [issue #7](https://github.com/Pavel-Tk/insight-consolidation-v1/issues/7), not a silent change.
 
 **3. Model-free baselines ship in the repo.** Letta scored 74.0% on LoCoMo with nothing but a filesystem and `grep`, which means most published memory architectures beat a trivial baseline by single digits. Run `python -m insight_consolidation_v1.baselines` before believing any model number:
 
