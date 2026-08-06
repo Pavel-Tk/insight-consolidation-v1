@@ -1,0 +1,57 @@
+[project]
+name = "insight-consolidation-v1"
+version = "0.1.0"
+description = "Can an agent recover a customer's real driver from sparse evidence buried in volume? Latent-intent consolidation with a citation gate."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Pavel Tkachyk" }]
+requires-python = ">=3.11"
+tags = [
+    "eval",
+    "train",
+    "memory",
+    "insight",
+    "multi-turn",
+    "tool-use",
+    "judge",
+    "long-context",
+    "synthetic",
+]
+dependencies = ["verifiers>=0.2.1"]
+
+[project.urls]
+Homepage = "https://github.com/Pavel-Tk/insight-consolidation-v1"
+Repository = "https://github.com/Pavel-Tk/insight-consolidation-v1"
+Issues = "https://github.com/Pavel-Tk/insight-consolidation-v1/issues"
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.24"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["insight_consolidation_v1"]
+
+[tool.hatch.build.targets.sdist]
+# The tests and the reference harness ship with the source. The whole argument of this
+# environment is that someone else can run it and check the numbers, which they cannot do
+# from a wheel with the tests stripped out.
+include = [
+    "insight_consolidation_v1",
+    "tests",
+    "run_eval.py",
+    "results.jsonl",
+    "README.md",
+    "LICENSE",
+    "pyproject.toml",
+]
+
+[tool.verifiers.eval]
+num_examples = 20
+rollouts_per_example = 1
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
