@@ -4,7 +4,11 @@
 
 **Can an agent recover what is actually driving a customer, from sparse evidence buried in volume?**
 
-An RL environment for [Prime Intellect's Environments Hub](https://app.primeintellect.ai/dashboard/environments), built on `verifiers` v1.
+An RL environment on [Prime Intellect's Environments Hub](https://app.primeintellect.ai/dashboard/environments/pavel-substrate/insight-consolidation-v1), built on `verifiers` v1.
+
+```bash
+prime env install pavel-substrate/insight-consolidation-v1
+```
 
 Each episode is one customer account: between 50 and 5,000 ordinary business documents - emails, meeting notes, support tickets, CRM entries, call summaries. Somewhere in there, four or five unremarkable traces jointly entail why the account is really behaving the way it is. No single document says it. Most of the corpus is irrelevant. Some of it argues convincingly for the obvious wrong answer.
 
@@ -170,7 +174,17 @@ Volumes sweep 50 / 500 / 5,000 documents. `volume` is recorded per episode, so t
 
 ## Install and run
 
+From the Hub:
+
 ```bash
+prime env install pavel-substrate/insight-consolidation-v1
+```
+
+Or from source:
+
+```bash
+git clone https://github.com/Pavel-Tk/insight-consolidation-v1
+cd insight-consolidation-v1
 uv pip install -e .
 python -m pytest tests -q                      # no keys needed
 python -m insight_consolidation_v1.baselines   # no keys needed
