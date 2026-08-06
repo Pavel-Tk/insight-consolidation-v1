@@ -1,0 +1,69 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # Everything here runs without an API key. The point of the repo is that a stranger can
+  # check the numbers, and a stranger without a key should still get most of the way.
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+        python: ["3.11", "3.12"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install
+        run: uv pip install --system -e ".[dev]"
+      - name: Tests
+        run: python -m pytest tests -q
+      - name: Baselines are reproducible and still weak
+        shell: bash
+        run: |
+          python -m insight_consolidation_v1.baselines | tee out1.txt
+          python -m insight_consolidation_v1.baselines > out2.txt
+          diff out1.txt out2.txt || { echo "baselines are not reproducible"; exit 1; }
+          # If lexical retrieval ever solves the task, the episodes need regenerating and
+          # every published number is void. Fail loudly rather than discover it later.
+          python - <<'PY'
+          import re
+          line = [l for l in open("out1.txt") if "grep (top hits)" in l][0]
+          recall = float(re.search(r"R=([\d.]+)", line).group(1))
+          print("grep top-hits recall:", recall)
+          assert recall < 0.5, f"retrieval alone is solving the task (R={recall}); regenerate episodes"
+          PY
+
+  # verifiers.v1 imports fcntl, so the rollout stack is Linux/macOS only. This job is the
+  # one that proves the taskset actually loads in the environment the Hub runs it in -
+  # it cannot be checked on Windows at all.
+  taskset-loads:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install
+        run: uv pip install --system -e ".[dev]"
+      - name: Taskset imports, loads and exposes its rubric
+        run: |
+          python - <<'PY'
+          from insight_consolidation_v1.taskset import InsightConfig, InsightTask, InsightTaskset
+          ts = InsightTaskset(InsightConfig(num_tasks=12, seed=0))
+          tasks = list(ts.load())
+          assert len(tasks) == 12, len(tasks)
+          for name in ("grounded_insight", "evidence_grounding", "confabulation",
+                       "insight_ungated", "docs_read", "citation_precision"):
+              assert hasattr(InsightTask, name), name
+          assert InsightTask.tools, "no toolset registered"
+          for t in tasks:
+              assert t.data.prompt and t.data.system_prompt
+              assert t.data.should_abstain or t.data.minimal_evidence
+          print(f"{len(tasks)} tasks loaded, rubric and toolset present")
+          PY
+      - name: Build wheel and sdist
+        run: uv build
