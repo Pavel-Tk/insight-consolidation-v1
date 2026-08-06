@@ -549,6 +549,11 @@ def main() -> int:
         help="episodes in flight at once. Episodes are independent; only the API is shared.",
     )
     ap.add_argument("--out", default="results.jsonl")
+    ap.add_argument(
+        "--resume",
+        action="store_true",
+        help="keep episodes already in --out and run only the missing ones, appending.",
+    )
     args = ap.parse_args()
 
     def build(model: str, dialect: str, base: str, key_var: str, role: str) -> Client | None:
@@ -591,6 +596,28 @@ def main() -> int:
         )
 
     specs = plan_episodes(args.n, seed=args.seed, volumes=tuple(args.volumes))
+
+    # Long runs against a rate-limited plan get interrupted. Resuming keeps the episodes
+    # already scored and re-runs only what is missing, keyed on the episode seed, so a
+    # 30-episode run does not have to survive in one sitting to be usable.
+    resumed: list[dict] = []
+    if args.resume and Path(args.out).exists():
+        for line in Path(args.out).read_text().splitlines():
+            line = line.strip()
+            if line:
+                try:
+                    resumed.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+        have = {r.get("episode_seed") for r in resumed if "episode_seed" in r}
+        before = len(specs)
+        specs = [s for s in specs if s.seed not in have]
+        print(f"resuming {args.out}: {len(resumed)} scored, {before - len(specs)} skipped")
+        if not specs:
+            print("nothing left to run.")
+            print(report(resumed, args.model, f"max_turns={args.max_turns}"))
+            return 0
+
     rows: list[dict] = []
     lock = threading.Lock()
     done = 0
@@ -611,6 +638,7 @@ def main() -> int:
                 print(f"[{done}/{len(specs)}] {label}  DROPPED - API unavailable: {e}", flush=True)
             return None
         row["schema"] = spec.schema_key
+        row["episode_seed"] = spec.seed
         with lock:
             done += 1
             fh.write(json.dumps(row) + "\n")
@@ -628,10 +656,11 @@ def main() -> int:
 
     workers = max(1, min(args.concurrency, len(specs)))
     print(f"{len(specs)} episodes, {workers} in flight, max_turns={args.max_turns}", flush=True)
-    with open(args.out, "w") as fh:
+    with open(args.out, "a" if resumed else "w") as fh:
         with ThreadPoolExecutor(max_workers=workers) as pool:
             rows = [r for r in pool.map(one, enumerate(specs, 1)) if r]
 
+    rows = [*resumed, *rows]
     if not rows:
         print("\nno episodes completed - every rollout hit the API limit. No numbers to report.")
         return 1
