@@ -1,5 +1,7 @@
 # insight-consolidation-v1
 
+[![ci](https://github.com/Pavel-Tk/insight-consolidation-v1/actions/workflows/ci.yml/badge.svg)](https://github.com/Pavel-Tk/insight-consolidation-v1/actions/workflows/ci.yml)
+
 **Can an agent recover what is actually driving a customer, from sparse evidence buried in volume?**
 
 An RL environment for [Prime Intellect's Environments Hub](https://app.primeintellect.ai/dashboard/environments), built on `verifiers` v1.
@@ -93,6 +95,68 @@ Ambient noise and prior-decoys draw from that same world. An earlier draft let n
 
 Only one dimension calls a model, and it calls it as a semantic-equivalence check against a fixed reference rather than an open-ended quality grade. A judge asked "does this mean the same thing as this?" is a far narrower instrument than a judge asked "how insightful is this?".
 
+## First run
+
+MiniMax-M2, n=30, `max_turns=60`, volumes 50 and 500, judged by MiniMax-M2. Per-episode rows
+are in [`results.jsonl`](results.jsonl) - all thirty, nothing dropped, nothing filtered.
+
+```
+grounded_insight     0.418  (sd 0.387)     <- the headline
+insight_ungated      0.508  (sd 0.402)     <- same judgement, gate removed
+evidence_grounding   0.357  (sd 0.311)
+confabulation        0.800  (sd 0.407)
+citation_precision   0.310  (sd 0.290)
+citation_recall      0.450  (sd 0.368)
+answer_parsed        0.867  (sd 0.346)
+docs_read             29.8
+turns                 44.4
+```
+
+| variant | n | grounded | ungated | grounding | docs read |
+|---|---|---|---|---|---|
+| `revision` | 5 | 0.724 | 0.850 | 0.563 | 23.2 |
+| `anti_prior` | 8 | 0.474 | 0.531 | 0.449 | 37.2 |
+| `normal` | 11 | 0.465 | 0.614 | 0.392 | 31.3 |
+| `null` | 6 | **0.000** | 0.000 | 0.000 | 22.8 |
+
+| volume | n | grounded | grounding | docs read |
+|---|---|---|---|---|
+| 50 | 20 | 0.449 | 0.418 | 37.0 |
+| 500 | 10 | 0.356 | 0.236 | 15.4 |
+
+**The null row is the result worth reading.** `confabulation` measures whether the agent
+abstained exactly when it should have. It scores 0.800, which sounds respectable and is
+entirely an artifact of composition: **the model abstained zero times in thirty episodes.**
+It scored 23/24 on "correctly did not abstain" and 0/6 on "correctly abstained", and 24/30 is
+0.800. Shown six accounts where nothing coherent is entailed, it invented a driver six times
+out of six.
+
+Drop the null episodes and the headline reads 0.522 instead of 0.418. That 0.104 is the exact
+size of the flattery a benchmark without a confabulation control hands out for free, measured
+rather than asserted, and it is why the null variant exists.
+
+Two more things the run says, both preliminary at this n:
+
+- **Volume hurts grounding more than insight.** At 500 documents the agent reads 15 of them
+  instead of 37 and citation grounding falls from 0.418 to 0.236, while `insight_ungated`
+  does not fall at all (0.487 to 0.550). It keeps forming opinions at the same rate while its
+  ability to evidence them degrades. That is the failure mode the citation gate was built to
+  price, and it is visible in one run.
+- **`anti_prior` costs less than expected** - 0.474 against `normal`'s 0.465, essentially no
+  difference. Either tripling the decoys is not enough pressure, or the judge's warning about
+  the common wrong answer is doing the work for the agent. Worth investigating before anyone
+  cites the anti-prior split as evidence of anything.
+
+`answer_parsed` at 0.867 means roughly one episode in eight never produced a usable answer
+contract. `forced_commit` at 0.133 means four episodes ran out of turns and had to be asked
+for a final answer.
+
+Caveats, stated rather than buried. n=30 is small and the standard deviations are large
+relative to the means - treat every number here as an order of magnitude, not a measurement.
+Volume 5000 was not run. Sampling temperature is not pinned ([issue #8](https://github.com/Pavel-Tk/insight-consolidation-v1/issues/8)), so this is not
+bit-reproducible. And the agent grades itself: judge calibration above says MiniMax-M2 is a
+competent grader of this task, but a second family would be better and is one flag away.
+
 ## Episode variants
 
 | variant | what it tests |
@@ -182,6 +246,16 @@ The honest risk with this design is that mechanical schemas turn the benchmark i
 ## Status
 
 v0.1.0. Early. The schemas are a first draft and will change as they meet real models.
+
+Known limitations are [filed as issues](https://github.com/Pavel-Tk/insight-consolidation-v1/issues) rather than left to be discovered: ten schemas is thin, the answer space is effectively closed, there is no pluggable backend, the judge has construct validity but no human-agreement number, volume 5000 is unrun, and sampling temperature is not pinned.
+
+Three defects were found in this environment's own scoring path by measuring it rather than reading it, and all three flattered the design:
+
+- the judge's grade was being read off the first digit in the model's reasoning scratchpad, which made every judged score noise
+- budget-exhausted episodes were graded on a half-finished investigation, because the forced-commit fallback could never fire
+- the citation gate table claimed shotgunning scored 0.10 when it scores 0.70
+
+They are described where they happened rather than quietly fixed, because a benchmark that has never caught itself being wrong has not been checked.
 
 Built by Pavel Tkachyk. MIT.
 
